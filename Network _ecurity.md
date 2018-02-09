@@ -5,14 +5,12 @@ Build a Linux Firewall Report
 
 ### VMs Setup
 
-As recommended for the assignment 3 VMs with Linux distribution of
-Debian 9 with the LXDE Window Manager from live CD was used. Each VM was
-given 1GB of RAM and 4GB of storage (just in case).
+As recommended for the assignment 3 VMs with Linux distribution of Debian 9 with the LXDE Window Manager from live CD was used. Each VM was given 1GB of RAM and 4GB of storage (just in case).
 
 The VM specification:
 
 -   Kernel release: 4.9.0-4-686
--   Kernel version: \#1 SMP Debian 4.9.65-3
+-   Kernel version: SMP Debian 4.9.65-3
 -   Operating system: Debian 9 GNU/Linux i686
 
 As described two networks were used:
@@ -83,8 +81,7 @@ iface enp0s3 inet static
     - 192.168.100.1/24, connected to client-net
     - 192.168.101.1/24, connected to server-net.
 
-2.  This was achieved by modifying /etc/network/interfaces configuration
-    file which had the following structure after modification:
+2.  This was achieved by modifying /etc/network/interfaces configuration file which had the following structure after modification:
 
 ``` {.bash}
 user@debian:~$ cat /etc/network/interfaces
@@ -163,7 +160,7 @@ After deploying the firewall rules from the script **part2.sh** all the traffic 
 
 1.  nmap scan after deployment of **part2.sh** script:![part2\_nmap\_after](/home/jokubas/Pictures/part2_nmap_after.png)
 
-    We see that the connection to the port 80 is **filtered** which means that Nmap a firewall, filter, or other network 	obstacle is blocking the port so that Nmap cannot tell whether it is open or closed. This happens due to the fact that all the connections to the port 80 are dropped rather than rejected and caller does not receive any feedback about the connection to port 80 while in the reject case it would send a notification to the caller and would allow to clearly identify the information about the port. It is also clear from picture that ssh connection is still open and this was verified by connecting to the server via ssh. This can be seen in the image below where in red we see the nmap scan and then in the green ssh connection happening from the client to the server.
+    We see that the connection to the port 80 is **filtered** which means that Nmap a firewall, filter, or other network obstacle is blocking the port so that Nmap cannot tell whether it is open or closed. This happens due to the fact that all the connections to the port 80 are dropped rather than rejected and caller does not receive any feedback about the connection to port 80 while in the reject case it would send a notification to the caller and would allow to clearly identify the information about the port. It is also clear from picture that ssh connection is still open and this was verified by connecting to the server via ssh. This can be seen in the image below where in red we see the nmap scan and then in the green ssh connection happening from the client to the server.
 
 ![part2\_ssh\_after](/home/jokubas/Pictures/part2_ssh_after.png)
 
