@@ -96,9 +96,9 @@ iface enp0s3 inet static
     network 192.168.100.0
     
 # server-net
-auto enp0s3
-iface enp0s3 inet static 
-    address 192.168.101.2
+auto enp0s8
+iface enp0s8 inet static 
+    address 192.168.101.1
     netmask 255.255.255.0
     network 192.168.101.0
 ```
@@ -234,24 +234,30 @@ After the run the following results were received which further confirms that on
 
 ### Part 4
 
-Blocking the access to all ports except for destination port 22 from the **client-net** to the **server-net** in the router so that only SSH connection passes the firewall on the router to the server-net. All the connections from the client-net which are not for port 22 are dropped. Server is still able to send all the packets out of the server-net to the client-net.
+Because the description of this part was quite vague, I tried to come up with the most sensible solution. I used a firewall on the router to filter out the traffic coming from the client-net to the server-net which meant that firewall on the router will be dealing with FORWARD packets rather than INPUT packets. I split this part into 2: 
 
-After deploying the firewall rules from the script **part4.sh** all the traffic was blocked except for port 22 and all the SSH connections were available. This was verified by the Nmap, nc scan and Wireshark capture
-on both the router and the server.
+* Running the part 2 description by: `sudo ./part4.sh PART2` with **PART2** flag set.
+* Running the part 3 description by: `sudo ./part4.sh PART3` with **PART3** flag set.
 
-1.  Wireshark capture of Nmap scan on the **router** before deploying the **part4.sh** firewall rules:![part5\_router\_wireshark\_before\_nmap](/home/jokubas/Pictures/part5_router_wireshark_before_nmap.png)
+##### Part 4 (PART3 testing)
+
+Blocking the access to all ports except for destination port 22 from the **client-net** to the **server-net** in the router so that only SSH connection passes the firewall on the router to the server-net. All the connections from the client-net which are not for port 22 are dropped. Server is still able to send all the packets out of the server-net to the client-net. In the end I added `-d 192.168.101.2` to the rule (`/sbin/iptables -A FORWARD -i "$client_net" -o "$server_net" -d 192.168.101.2 -p tcp --dport 22 -j ACCEPT` ) accepting SSH connections from the client-net to the server-net which are only meant for the server itself. I consider this as a sensible solution as in the real world we would have a server on the network on which we would like to enable SSH, however, for other nodes on the same network we might not want to have access to port 22 open. If it is not the case only the part `-d 192.168.101.2` should be removed.
+
+After deploying the firewall rules from the script **part4.sh PART3** all the traffic was blocked except for port 22 and all the SSH connections were available. This was verified by the Nmap, nc scan and Wireshark capture on both the router and the server.
+
+1.  Wireshark capture of Nmap scan on the **router** before deploying the **part4.sh PART3** firewall rules:![part5\_router\_wireshark\_before\_nmap](/home/jokubas/Pictures/part5_router_wireshark_before_nmap.png)
 
     The scan clearly demonstrates that packets are flowing from and to the both ends. Client (blue outline)(192.168.100.2) sends multiple SYN requests to the server (green outline) (192.168.101.2). Later server responds to those packets by sending packet with RST,ACK flags set. Therefore, the communication between the server and the client are allowed to pass arbitrary packets. Therefore, with nmap scan we get the full scan of the server:
 
     ![part2\_nmap\_before](/home/jokubas/Pictures/part2_nmap_before.png)
 
 
-2.  Nmap scan on the **client** after deploying the **part4.sh** firewall rules:![part5\_nmapPn](/home/jokubas/Pictures/part5_nmapPn.png)
+2.  Nmap scan on the **client** after deploying the **part4.sh PART3** firewall rules:![part5\_nmapPn](/home/jokubas/Pictures/part5_nmapPn.png)
 
     After deploying the rules it is clear that for the client only a SSH connection is open (red outline) because all the other ports are filtered as seen in the green outline meaning that no response to those requests have been returned and they were dropped by the router firewall.
 
 
-3.  Nmap scan captured with Wireshark on the **router** after deploying the **part4.sh** firewall rules. This was the capture of the scan above (step 2):
+3.  Nmap scan captured with Wireshark on the **router** after deploying the **part4.sh PART3** firewall rules. This was the capture of the scan above (step 2):
 
     ![part5\_router\_wireshark\_nmap\_after](/home/jokubas/Pictures/part5_router_wireshark_nmap_after.png)
 
@@ -267,7 +273,7 @@ This fact was also verified by running the Wireshark capture on the **server** a
 
 We can see that SYN requests on the server were received to the port 22 only. This confirms the correct firewall behavior on the router because only requests to port 22 are passed throw by the router.
 
-4.  After deployment of **part4.sh** firewall rules the SSH connections were passing from client to the server through the router. There was no difference in the Wireshark captures before and after the rules
+4.  After deployment of **part4.sh PART3** firewall rules the SSH connections were passing from client to the server through the router. There was no difference in the Wireshark captures before and after the rules
     were deployed. The capture on the **router** of the SSH between the server and the client happening can be seen below:
 
     ![part5\_router\_wireshark\_ssh](/home/jokubas/Pictures/part5_router_wireshark_ssh.png)We see packets flowing to both ends and payload being carried through what confirms that port 22 is still open for the connections coming from the client-net. The capture of the same connection done on the **server** can be seen below verifying the fact of SSH still working with firewall rules being deployed:
@@ -276,7 +282,7 @@ We can see that SYN requests on the server were received to the port 22 only. Th
 
 5.  Wireshark capture of the telnet connection to the random port (not port 22) on the **router** confirms that packets are not going through the firewall on the router and that **router** block what it should block:
 
-    ![part5\_telnet\_router](/home/jokubas/Pictures/part5_telnet_router.png)We see the TCP SYN packets being send from the client to the server, however, because the packets are being 		dropped by the firewall on the **router**, the server does not receive anything and that was confirmed  by the capture on the server which did not capture any traffic. This confirms that router firewall blocked that traffic. 
+    ![part5\_telnet\_router](/home/jokubas/Pictures/part5_telnet_router.png)We see the TCP SYN packets being send from the client to the server, however, because the packets are being dropped by the firewall on the **router**, the server does not receive anything and that was confirmed  by the capture on the server which did not capture any traffic. This confirms that router firewall blocked that traffic. 
 
     ​The call from the client to random port 1596 can be seen below which verifies that the connection times out:
 
@@ -297,6 +303,22 @@ We can see that SYN requests on the server were received to the port 22 only. Th
 8.  To sum up, we got the following behavior: all the connections to the server are dropped and none of the feedback is returned to the caller except for the connections to the port 22 which allows to
     establish the SSH connection. This is the same behavior as with the part 3, however, now all the connections are being dropped by the router rather than the server. The server does not receive any
     traffic that it is suppose to reach which is SSH on port 22. Also, we verified that traffic from the server is able to leave the server-net freely without any constraints.
+
+##### Part 4 (PART2 testing)
+
+Blocking the access to the port 80 from the **client-net** to the **server-net** in the router so that fetching index page times out and the packets to port 80 are dropped on the router firewall and does not pass through the router to the server-net. In the end I added `-d 192.168.101.2` to the rule (`/sbin/iptables -A FORWARD -i "$client_net" -o "$server_net" -d 192.168.101.2 -p tcp --dport 80 -j DROP` ) dropping the packets to port 80 only to the server and not the entire server-net. I consider this as a sensible solution as in the real world we might have multiple servers on the server-net which would have their port 80 exposed to the outside world and would not like traffic to them being filtered. If it is not the case only the part `-d 192.168.101.2` should be removed which filters port 80 for the entire server-net. 
+
+In this part only captures after deployment of **sudo ./part4.sh PART2** are going to be explained as the behavior before the capture was described in the section above (Part 4 (PART3 testing)).
+
+After deploying the firewall rules from the script **part4.sh PART2** all the traffic to the port 80 to the server was blocked. This was verified by the nmap scan and Wireshark capture on the server and the router.
+
+1. Nmap scan after the deployment **part4.sh PART2** firewall rules on the router (scan done from the client):
+
+   ![part2\_nmap\_after](/home/jokubas/Pictures/part2_nmap_after.png)
+
+   Which is the same behavior as in the Part 2 which was expected. We see that the connection to the port 80 is **filtered** meaning that no rules came back to the client. This should be further verified by running a wireshark on the router to see if the traffic from port 80 from the server is sent back to the client or is it dropped on the router an no results are returned. The results of Wireshark capture on the router can be seen below: ![part4-PART2_filter_router](/home/jokubas/Pictures/part4-PART2_filter_router.png)
+
+   All the results were filtered because responses for each nmap ping were sent from the server to the client and it was hard to verify if the port 80 is being blocked (it verified the fact that packets to other ports are freely passed through by the router). After filtering `tcp.port == 80` we see that packets flow only from the client (source `192.168.100.2`)  to the server (dest `192.168.101.2`) and no response is sent back from the server. This was further verified by running the capture on the server and applying the same `tcp.port == 80 ` filter, however, no packets were seen in the capture which proves that the firewall on the router was blocking access to the port 80 (and allowing all the others).
 
 ### Part 5
 
@@ -375,7 +397,14 @@ To sum up, the testing of Part 5 verified the fact that firewall rules deployed 
 
 ### Part 6
 
-To confirm that logging is working correctly and only one logging line is generated per second per source IP/destination port pair two tests were done:
+Because Part 6 was based on the Part 4 which contained two different version of the firewall, the same was done with the Part 6:
+
+- Running the part 2 description by: `sudo ./part6.sh PART2` with **PART2** flag set.
+- Running the part 3 description by: `sudo ./part6.sh PART3` with **PART3** flag set.
+
+##### Part 6 (PART3)
+
+Logging all the dropped packets omitting the SSH connections to the port 22. To confirm that logging is working correctly and only one logging line is generated per second per source IP/destination port pair two tests were done:
 
 * For the first test I ran a burst of 400 connections from the client to the server and checked what is the rate at which lines are being generated. The test was the following:
 
@@ -418,6 +447,28 @@ To confirm that logging is working correctly and only one logging line is genera
   * red outline -source IP-**192.168.100.2** and **destination port 1** (both in pink)
 
   We see that first three logs were generated at exactly the same time `19:22:24` (seen in blue outline) and also we that first three logs are from different groups described above which means that logs are being generated based on the src ip and dest port. This is further repeated every second onward. Thus, the testing confirms that logging is generated 1/sec per src ip/dest port pair.
+
+##### Part 6 (PART2)
+
+The exact same testing was done as before was done for this part. Logging all the dropped packets omitting to the port 80 dedicated to the server. To confirm that logging is working correctly and only one logging line is generated per second per source IP/destination port pair the only single testing was done because there is no use to test connections to different ports as only the ones to port 80 are logged.
+
+- For the first test I ran a burst of 400 connections to the port 80 of the server from the client and checked what is the rate at which lines are being generated. The test was the following:
+
+  ```bash
+  #!/bin/bash
+
+  for i in {1..400} ; do
+      echo "QUIT" | nc -w 5 server 80 &
+      sleep 0.1
+  done
+
+  ```
+
+  This test allowed to verify at what rate lines are being generated. And the `/var/log/kern/log` confirmed that log is being generated at exactly 1 second intervals. This can be seen in the image below: ![part6_PART2](/home/jokubas/Pictures/part6_PART2.png)
+
+  In the red outline we can see the time when the log is generated at all the logs are exactly 1 second apart from each other. Green outline shows the source IP and blue outline shows destination port which is 80 to confirm the fact that 1/sec logs are generated per source IP and destination port pair.
+
+  Thus, the testing confirms that logging is generated 1/sec per src ip/dest port pair.
 
 ### Assignment Overview
 
